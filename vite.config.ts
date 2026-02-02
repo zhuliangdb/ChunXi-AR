@@ -4,6 +4,8 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 对于 GitHub Pages，base 应该设置为仓库名称
+  base: '/ChunXi-AR/',
   plugins: [vue()],
   resolve: {
     alias: {
