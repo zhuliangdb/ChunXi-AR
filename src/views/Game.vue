@@ -147,7 +147,8 @@
             <p class="riddle-question">身穿红袍，头戴绿帽，坐在泥里，呆头呆脑（打一蔬菜）</p>
             <input 
               type="text" 
-              v-model="riddles[0].answer" 
+              :value="riddles[0]?.answer" 
+              @input="$event => riddles[0] && (riddles[0].answer = ($event.target as HTMLInputElement).value)" 
               class="riddle-input" 
               placeholder="请输入答案"
               aria-label="输入谜语答案"
@@ -159,15 +160,16 @@
             >
               检查答案
             </button>
-            <div v-if="riddles[0].result" class="riddle-result" :class="{ correct: riddles[0].result.correct, incorrect: !riddles[0].result.correct }">
-              <p>{{ riddles[0].result.message }}</p>
+            <div v-if="riddles[0]?.result" class="riddle-result" :class="{ correct: riddles[0]?.result.correct, incorrect: !riddles[0]?.result.correct }">
+              <p>{{ riddles[0]?.result.message }}</p>
             </div>
           </div>
           <div class="riddle-item">
             <p class="riddle-question">春节放假三天（打一字）</p>
             <input 
               type="text" 
-              v-model="riddles[1].answer" 
+              :value="riddles[1]?.answer" 
+              @input="$event => riddles[1] && (riddles[1].answer = ($event.target as HTMLInputElement).value)" 
               class="riddle-input" 
               placeholder="请输入答案"
               aria-label="输入谜语答案"
@@ -179,15 +181,16 @@
             >
               检查答案
             </button>
-            <div v-if="riddles[1].result" class="riddle-result" :class="{ correct: riddles[1].result.correct, incorrect: !riddles[1].result.correct }">
-              <p>{{ riddles[1].result.message }}</p>
+            <div v-if="riddles[1]?.result" class="riddle-result" :class="{ correct: riddles[1]?.result.correct, incorrect: !riddles[1]?.result.correct }">
+              <p>{{ riddles[1]?.result.message }}</p>
             </div>
           </div>
           <div class="riddle-item">
             <p class="riddle-question">除夕夜守岁（打一歇后语）</p>
             <input 
               type="text" 
-              v-model="riddles[2].answer" 
+              :value="riddles[2]?.answer" 
+              @input="$event => riddles[2] && (riddles[2].answer = ($event.target as HTMLInputElement).value)" 
               class="riddle-input" 
               placeholder="请输入答案"
               aria-label="输入谜语答案"
@@ -199,8 +202,8 @@
             >
               检查答案
             </button>
-            <div v-if="riddles[2].result" class="riddle-result" :class="{ correct: riddles[2].result.correct, incorrect: !riddles[2].result.correct }">
-              <p>{{ riddles[2].result.message }}</p>
+            <div v-if="riddles[2]?.result" class="riddle-result" :class="{ correct: riddles[2]?.result.correct, incorrect: !riddles[2]?.result.correct }">
+              <p>{{ riddles[2]?.result.message }}</p>
             </div>
           </div>
         </div>
@@ -441,25 +444,33 @@ const foodQuiz = ref({
   result: null as any
 })
 
+// 谜语类型定义
+interface Riddle {
+  question: string;
+  answer: string;
+  correctAnswer: string;
+  result: { correct: boolean; message: string } | null;
+}
+
 // 谜语
-const riddles = ref([
+const riddles = ref<Riddle[]>([
   {
     question: '身穿红袍，头戴绿帽，坐在泥里，呆头呆脑（打一蔬菜）',
     answer: '',
     correctAnswer: '胡萝卜',
-    result: null as any
+    result: null
   },
   {
     question: '春节放假三天（打一字）',
     answer: '',
     correctAnswer: '人',
-    result: null as any
+    result: null
   },
   {
     question: '除夕夜守岁（打一歇后语）',
     answer: '',
     correctAnswer: '辞旧迎新',
-    result: null as any
+    result: null
   }
 ])
 
@@ -515,6 +526,9 @@ const resetFoodQuiz = () => {
 // 检查谜语答案
 const checkRiddle = (index: number) => {
   const riddle = riddles.value[index]
+  if (!riddle) {
+    return
+  }
   if (!riddle.answer) {
     alert('请输入答案！')
     return

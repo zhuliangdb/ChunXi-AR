@@ -6,11 +6,13 @@
 /**
  * 资源优先级
  */
-export enum ResourcePriority {
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low'
-}
+export const ResourcePriority = {
+  HIGH: 'high',
+  MEDIUM: 'medium',
+  LOW: 'low'
+} as const;
+
+export type ResourcePriority = typeof ResourcePriority[keyof typeof ResourcePriority];
 
 /**
  * 预加载资源配置
@@ -48,11 +50,11 @@ export function preloadResources(resources: PreloadResource[], priorityFilter?: 
       }
       
       if (resource.imagesrcset) {
-        link.imagesrcset = resource.imagesrcset;
+        (link as any).imageSrcset = resource.imagesrcset;
       }
       
       if (resource.imagesizes) {
-        link.imagesizes = resource.imagesizes;
+        (link as any).imageSizes = resource.imagesizes;
       }
       
       // 根据优先级设置fetchpriority

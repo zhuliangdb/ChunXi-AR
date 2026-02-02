@@ -228,7 +228,7 @@
                 :aria-label="wish.liked ? '取消点赞' : '点赞'"
               >
                 {{ wish.liked ? '❤️ 已点赞' : '🤍 点赞' }}
-                <span v-if="wish.likes > 0">({{ wish.likes }})</span>
+                <span v-if="(wish.likes || 0) > 0">({{ wish.likes || 0 }})</span>
               </button>
             </div>
           </div>
@@ -252,12 +252,12 @@ const selectedTemplate = ref(1)
 const cardMessage = ref('')
 const messageName = ref('')
 const messageContent = ref('')
-const generatedCard = ref(null)
+const generatedCard = ref<any>(null)
 const includeName = ref(false)
 const senderName = ref('')
 const allowShare = ref(true)
 const searchKeyword = ref('')
-const savedCards = ref([])
+const savedCards = ref<any[]>([])
 
 // 卡片模板
 const cardTemplates = [
@@ -328,6 +328,10 @@ const generateCard = () => {
   
   // 根据选择的模板生成卡片
   const template = cardTemplates.find(t => t.id === selectedTemplate.value) || cardTemplates[0];
+  if (!template) {
+    alert('模板加载失败，请稍后重试');
+    return;
+  }
   
   // 构建祝福内容
   let finalMessage = cardMessage.value;
@@ -430,7 +434,7 @@ const saveCard = () => {
   }
 };
 
-const loadSavedCard = (index) => {
+const loadSavedCard = (index: number) => {
   const card = savedCards.value[index];
   if (card) {
     selectedTemplate.value = card.templateId;
@@ -442,7 +446,7 @@ const loadSavedCard = (index) => {
   }
 };
 
-const deleteSavedCard = (index) => {
+const deleteSavedCard = (index: number) => {
   if (confirm('确定要删除这张卡片吗？')) {
     try {
       const savedCardsList = JSON.parse(localStorage.getItem('savedCards') || '[]');
@@ -462,7 +466,7 @@ const refreshWall = () => {
   alert('祝福墙已刷新！');
 };
 
-const likeWish = (index) => {
+const likeWish = (index: number) => {
   // 使用store的toggleLike方法
   store.toggleLike(index);
 };
