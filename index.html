@@ -5,10 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>新春祝福</title>
-    <!-- A-Frame CDN -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <!-- AR.js CDN (如果加载失败，AR功能会优雅降级) -->
-    <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.4.3/build/aframe/aframe-ar-nft.min.js" onerror="console.warn('AR.js 加载失败，AR功能将无法使用')"></script>
+    <!-- 移除 A-Frame 和 AR.js CDN，改用纯 Three.js 实现 3D 效果 -->
   </head>
   <body>
     <div id="app"></div>

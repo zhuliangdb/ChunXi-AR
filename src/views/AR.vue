@@ -47,71 +47,20 @@
           </div>
           
           <div class="ar-scene-container">
-            <!-- AR场景 -->
-            <div v-if="arjsLoaded" role="region" aria-label="AR场景">
-              <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
-                <a-marker preset="hiro">
-                  <a-entity position="0 0 0">
-                    <!-- 黄山场景 -->
-                    <template v-if="activeScene === 'huangshan'">
-                      <a-box position="0 0.5 0" material="color: red; opacity: 0.5;"></a-box>
-                      <a-sphere position="1 0.5 0" material="color: blue;"></a-sphere>
-                      <a-cylinder position="-1 0.5 0" material="color: green;"></a-cylinder>
-                      <a-text value="黄山迎客松" position="0 -0.5 0" align="center" color="black"></a-text>
-                    </template>
-                    <!-- 长城场景 -->
-                    <template v-else-if="activeScene === 'greatwall'">
-                      <a-box position="0 0.5 0" material="color: brown; opacity: 0.8;"></a-box>
-                      <a-box position="1 0.5 0" material="color: brown; opacity: 0.8;"></a-box>
-                      <a-box position="-1 0.5 0" material="color: brown; opacity: 0.8;"></a-box>
-                      <a-text value="长城" position="0 -0.5 0" align="center" color="black"></a-text>
-                    </template>
-                    <!-- 故宫场景 -->
-                    <template v-else-if="activeScene === 'forbidden'">
-                      <a-box position="0 0.5 0" material="color: red; opacity: 0.8;"></a-box>
-                      <a-sphere position="0 1 0" material="color: gold;"></a-sphere>
-                      <a-text value="故宫" position="0 -0.5 0" align="center" color="black"></a-text>
-                    </template>
-                    <!-- 春节场景 -->
-                    <template v-else-if="activeScene === 'spring'">
-                      <a-box position="0 0.5 0" material="color: red; opacity: 0.8;"></a-box>
-                      <a-cylinder position="0 1 0" material="color: gold;"></a-cylinder>
-                      <a-text value="春节快乐" position="0 -0.5 0" align="center" color="black"></a-text>
-                    </template>
-                  </a-entity>
-                </a-marker>
-                <a-entity camera></a-entity>
-              </a-scene>
-            </div>
-            <div v-else class="ar-fallback" role="alert" aria-live="polite">
-              <div class="fallback-content">
-                <span class="fallback-icon">🎯</span>
-                <h4>AR功能暂时不可用</h4>
-                <p>由于网络限制，AR.js库无法加载。但您仍然可以：</p>
+            <!-- Three.js 3D 预览场景 -->
+            <div class="threejs-scene" ref="threejsSceneRef" role="region" aria-label="3D预览场景"></div>
+            
+            <!-- AR功能说明 -->
+            <div class="ar-info" role="alert" aria-live="polite">
+              <div class="info-content">
+                <span class="info-icon">🎯</span>
+                <h4>3D场景预览</h4>
+                <p>使用鼠标或触摸操作可以：</p>
                 <ul>
-                  <li>查看AR标记图案，准备体验</li>
-                  <li>浏览下方的AR场景预览</li>
-                  <li>了解不同AR场景的内容</li>
+                  <li>拖动：旋转场景</li>
+                  <li>滚轮：缩放场景</li>
+                  <li>点击：重置视角</li>
                 </ul>
-                
-                <!-- 离线预览 -->
-                <div class="offline-preview">
-                  <h5>AR场景预览</h5>
-                  <div class="scene-preview-list">
-                    <div 
-                      v-for="scene in arScenes" 
-                      :key="scene.id"
-                      class="scene-preview-item"
-                      :class="{ active: activeScene === scene.id }"
-                      @click="activeScene = scene.id"
-                      tabindex="0"
-                    >
-                      <LazyImage :src="scene.previewImage" :alt="scene.name + '预览'" class="scene-preview-img" />
-                      <h6>{{ scene.name }}</h6>
-                      <p>{{ scene.description }}</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -120,16 +69,14 @@
             <button 
               class="control-btn" 
               @click="startAR"
-              aria-label="启动AR"
-              :disabled="!arjsLoaded"
+              aria-label="启动3D场景"
             >
-              🔄 启动AR
+              🔄 启动3D场景
             </button>
             <button 
               class="control-btn" 
               @click="resetAR"
-              aria-label="重置AR"
-              :disabled="!arjsLoaded"
+              aria-label="重置3D场景"
             >
               🔄 重置
             </button>
@@ -137,7 +84,6 @@
               class="control-btn" 
               @click="toggleFullscreen"
               aria-label="切换全屏"
-              :disabled="!arjsLoaded"
             >
               📱 全屏
             </button>
@@ -149,13 +95,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import LazyImage from '../components/LazyImage.vue';
+import { ref, onMounted, watch } from 'vue';
+import { ARSkill } from '../skills/skill-ar';
 
-// 检测AR.js是否加载成功
-const arjsLoaded = ref(false);
 // 当前活动场景
 const activeScene = ref('huangshan');
+// Three.js 场景引用
+const threejsSceneRef = ref<HTMLElement | null>(null);
+// ARSkill 实例
+let arSkill: ARSkill | null = null;
 
 // AR场景配置
 const arScenes = [
@@ -186,60 +134,71 @@ const arScenes = [
 ];
 
 onMounted(() => {
-  // 检查AR.js是否加载成功
-  // 由于CDN链接被阻止，我们暂时将其设置为false
-  // 在正常网络环境下，应该检查window.ARjs是否存在
-  arjsLoaded.value = false;
+  // 初始化 Three.js 场景
+  if (threejsSceneRef.value) {
+    arSkill = new ARSkill(threejsSceneRef.value);
+    // 根据当前场景创建对应的模型
+    createSceneModel(activeScene.value);
+  }
 });
 
-// AR相关方法
-const startAR = () => {
-  if (!arjsLoaded.value) {
-    console.warn('AR.js未加载，无法启动AR场景');
-    return;
+// 监听场景变化
+watch(activeScene, (newScene) => {
+  // 清理现有场景
+  if (threejsSceneRef.value && arSkill) {
+    // 销毁现有场景
+    arSkill.destroy(threejsSceneRef.value);
+    // 重新创建场景
+    arSkill = new ARSkill(threejsSceneRef.value);
+    // 创建新场景的模型
+    createSceneModel(newScene);
   }
+});
+
+// 根据场景类型创建模型
+const createSceneModel = (sceneType: string) => {
+  if (!arSkill) return;
   
-  // 启动AR场景
-  const scene = document.querySelector('a-scene');
-  if (scene) {
-    // 使用类型断言处理TypeScript类型问题
-    const arScene = scene as any;
-    if (arScene.components?.arjs?.start) {
-      arScene.components.arjs.start();
-      console.log('AR场景已启动');
-    }
+  // 根据场景类型创建不同的模型
+  switch (sceneType) {
+    case 'huangshan':
+      arSkill.createSpringFestivalModel('lantern');
+      break;
+    case 'greatwall':
+      arSkill.createSpringFestivalModel('firecracker');
+      break;
+    case 'forbidden':
+      arSkill.createSpringFestivalModel('tiger');
+      break;
+    case 'spring':
+      arSkill.createSpringFestivalModel('lantern');
+      arSkill.createSpringFestivalModel('firecracker');
+      break;
   }
 };
 
+// AR相关方法
+const startAR = () => {
+  console.log('3D场景已启动');
+  // Three.js 场景已在初始化时自动启动
+};
+
 const resetAR = () => {
-  if (!arjsLoaded.value) {
-    console.warn('AR.js未加载，无法重置AR场景');
-    return;
-  }
-  
-  // 重置AR场景
-  const scene = document.querySelector('a-scene');
-  if (scene) {
-    // 使用类型断言处理TypeScript类型问题
-    const arScene = scene as any;
-    if (arScene.components?.arjs?.reset) {
-      arScene.components.arjs.reset();
-      console.log('AR场景已重置');
-    }
+  if (threejsSceneRef.value && arSkill) {
+    // 销毁现有场景
+    arSkill.destroy(threejsSceneRef.value);
+    // 重新创建场景
+    arSkill = new ARSkill(threejsSceneRef.value);
+    // 创建当前场景的模型
+    createSceneModel(activeScene.value);
+    console.log('3D场景已重置');
   }
 };
 
 const toggleFullscreen = () => {
-  if (!arjsLoaded.value) {
-    console.warn('AR.js未加载，无法切换全屏');
-    return;
-  }
-  
-  // 切换全屏
-  const scene = document.querySelector('a-scene');
-  if (scene) {
+  if (threejsSceneRef.value) {
     if (!document.fullscreenElement) {
-      scene.requestFullscreen().catch(err => {
+      threejsSceneRef.value.requestFullscreen().catch(err => {
         console.error(`全屏错误: ${err.message}`);
       });
     } else {
@@ -386,127 +345,57 @@ const toggleFullscreen = () => {
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 1rem;
+  position: relative;
 }
 
-.ar-scene-container a-scene {
+.threejs-scene {
   width: 100%;
   height: 100%;
 }
 
-/* AR降级显示样式 */
-.ar-fallback {
-  width: 100%;
-  height: 100%;
-  background-color: #f8f9fa;
-  border: 2px dashed #d4af37;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.fallback-content {
-  text-align: center;
-  max-width: 90%;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.fallback-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  display: block;
-}
-
-.fallback-content h4 {
-  color: #c41e3a;
-  margin-bottom: 1rem;
-}
-
-.fallback-content p {
-  margin-bottom: 1rem;
-  line-height: 1.6;
-}
-
-.fallback-content ul {
-  text-align: left;
-  margin: 1rem auto;
-  max-width: 300px;
-}
-
-.fallback-content li {
-  margin-bottom: 0.5rem;
-}
-
-/* 离线预览样式 */
-.offline-preview {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #eee;
-}
-
-.offline-preview h5 {
-  color: #c41e3a;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-}
-
-.scene-preview-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.scene-preview-item {
-  background-color: #fff;
+.ar-info {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
   padding: 1rem;
   border-radius: 10px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  border: 2px solid transparent;
+  max-width: 200px;
+  z-index: 10;
 }
 
-.scene-preview-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-  border-color: #d4af37;
-}
-
-.scene-preview-item.active {
-  border-color: #c41e3a;
-  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.2);
-}
-
-.scene-preview-img {
-  width: 100%;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 5px;
-  margin-bottom: 0.8rem;
-}
-
-.scene-preview-item h6 {
+.info-content h4 {
   color: #c41e3a;
   margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.info-content p {
+  margin-bottom: 0.5rem;
   font-size: 0.9rem;
-}
-
-.scene-preview-item p {
-  font-size: 0.8rem;
-  color: #666;
   line-height: 1.4;
-  margin: 0;
 }
 
-/* 场景预览项焦点样式 */
-.scene-preview-item:focus {
-  outline: 2px solid #d4af37;
-  outline-offset: 2px;
+.info-content ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
+
+.info-content li {
+  margin-bottom: 0.3rem;
+}
+
+.info-icon {
+  font-size: 1.5rem;
+  display: block;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+
 
 .ar-preview {
   background-color: #fff;
